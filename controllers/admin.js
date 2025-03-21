@@ -8,66 +8,63 @@ const mongoose = require('mongoose');
 // Get admin dashboard statistics
 exports.getAdminStats = async (req, res) => {
   try {
-    const totalUsers = await User.countDocuments();
-    const totalProducts = await Product.countDocuments();
-    const totalCategories = await Category.countDocuments();
-    
-    // Recent users
+    // Verify if the user is an admin
+    if (!req.user.isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    // Use count() instead of countDocuments() for compatibility
+    const totalUsers = await User.find().count();
+    const totalProducts = await Product.find().count();
+    const totalCategories = await Category.find().count();
+
+    // Get recent products (last 5)
+    const recentProducts = await Product.find()
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate('publisher', 'firstName lastName email')
+      .populate('category', 'name');
+
+    // Get recent users (last 5)
     const recentUsers = await User.find()
       .sort({ createdAt: -1 })
       .limit(5)
       .select('-password');
-    
-    // Recent products
-    const recentProducts = await Product.find()
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .populate('category', 'name')
-      .populate('publisher', 'firstName lastName');
-    
-    // Products by category
+
+    // Get product distribution by category
     const productsByCategory = await Category.aggregate([
-      { $lookup: {
+      {
+        $lookup: {
           from: 'products',
           localField: '_id',
           foreignField: 'category',
           as: 'products'
         }
       },
-      { $project: {
+      {
+        $project: {
           name: 1,
-          count: { $size: '$products' }
+          productCount: { $size: '$products' }
         }
       }
     ]);
-    
-    // Monthly registrations
-    const monthlyRegistrations = await User.aggregate([
-      {
-        $group: {
-          _id: { 
-            month: { $month: '$createdAt' }, 
-            year: { $year: '$createdAt' } 
-          },
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { '_id.year': 1, '_id.month': 1 } }
-    ]);
-    
+
     res.status(200).json({
       success: true,
-      data: {
+      stats: {
         totalUsers,
         totalProducts,
         totalCategories,
-        recentUsers,
         recentProducts,
-        productsByCategory,
-        monthlyRegistrations
+        recentUsers,
+        productsByCategory
       }
     });
   } catch (error) {
+    console.error('Error fetching admin statistics:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch admin statistics',
@@ -243,6 +240,84 @@ exports.deleteProduct = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to delete product',
+      error: error.message
+    });
+  }
+};
+
+// Get all users (admin only)
+exports.getAllUsers = async (req, res) => {
+  try {
+    // Verify if the user is an admin
+    if (!req.user.isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    const users = await User.find().select('-password');
+
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      users
+    });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch users',
+      error: error.message
+    });
+  }
+};
+
+// Update user role (admin only)
+exports.updateUserRole = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { isAdmin } = req.body;
+
+    // Verify if the user is an admin
+    if (!req.user.isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    // Check if isAdmin is provided
+    if (isAdmin === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Admin status is required'
+      });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { isAdmin },
+      { new: true }
+    ).select('-password');
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'User role updated successfully',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update user role',
       error: error.message
     });
   }

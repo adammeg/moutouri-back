@@ -12,4 +12,10 @@ router.put('/products/:id/verify', protect, admin, adminController.verifyProduct
 router.put('/products/:id/feature', protect, admin, adminController.featureProduct);
 router.delete('/products/:id', protect, admin, adminController.deleteProduct);
 
+// Get all users (admin only)
+router.get('/users', protect, admin, adminController.getAllUsers);
+
+// Update user role (admin only)
+router.put('/users/:userId', protect, admin, adminController.updateUserRole);
+
 module.exports = router;
