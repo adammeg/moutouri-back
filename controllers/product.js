@@ -1,0 +1,406 @@
+const Product = require('../models/product');
+const { Category } = require('../models/category');
+const mongoose = require('mongoose');
+
+// @desc    Create a new product
+// @route   POST /api/products
+// @access  Private
+exports.createProduct = async (req, res) => {
+  try {
+    console.log('📝 Creating product with data:', req.body);
+    console.log('📁 Files received:', req.files ? 'Yes' : 'No');
+    
+    // Process image files from middleware
+    if (req.fileUrls && req.fileUrls.length > 0) {
+      console.log('🖼️ Image URLs:', req.fileUrls);
+      req.body.images = req.fileUrls;
+    } else {
+      console.log('❌ No images received from middleware');
+    }
+    
+    // Set the publisher to the current user
+    req.body.publisher = req.user._id;
+    
+    // Create the product
+    const product = await Product.create(req.body);
+    
+    console.log('✅ Product created successfully:', product._id);
+    
+    res.status(201).json({
+      success: true,
+      product
+    });
+  } catch (error) {
+    console.error('❌ Error creating product:', error);
+    
+    // Detailed validation error handling
+    if (error.name === 'ValidationError') {
+      const validationErrors = {};
+      
+      // Extract each validation error
+      Object.keys(error.errors).forEach(field => {
+        validationErrors[field] = error.errors[field].message;
+      });
+      
+      console.log('🔍 Validation errors:', validationErrors);
+      
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: validationErrors
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create product',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Get all products with filters
+// @route   GET /api/products
+// @access  Public
+exports.getAllProducts = async (req, res) => {
+  try {
+    const {
+      keyword,
+      category,
+      minPrice,
+      maxPrice,
+      condition,
+      minYear,
+      maxYear,
+      sort = 'createdAt',
+      limit = 10,
+      page = 1
+    } = req.query;
+    
+    // Build filter query
+    let query = { isActive: true };
+    
+    // Search by keyword
+    if (keyword) {
+      query.$or = [
+        { title: { $regex: keyword, $options: 'i' } },
+        { description: { $regex: keyword, $options: 'i' } }
+      ];
+    }
+    
+    // Filter by category
+    if (category) {
+      query.category = category;
+    }
+    
+    // Filter by price range
+    if (minPrice || maxPrice) {
+      query.price = {};
+      if (minPrice) query.price.$gte = Number(minPrice);
+      if (maxPrice) query.price.$lte = Number(maxPrice);
+    }
+    
+    // Filter by condition
+    if (condition) {
+      query.condition = condition;
+    }
+    
+    // Filter by year range
+    if (minYear || maxYear) {
+      query.year = {};
+      if (minYear) query.year.$gte = Number(minYear);
+      if (maxYear) query.year.$lte = Number(maxYear);
+    }
+    
+    // Set up pagination
+    const skip = (Number(page) - 1) * Number(limit);
+    
+    // Set up sorting (newest, price low to high, price high to low)
+    let sortOption = {};
+    switch (sort) {
+      case 'priceAsc':
+        sortOption = { price: 1 };
+        break;
+      case 'priceDesc':
+        sortOption = { price: -1 };
+        break;
+      case 'yearDesc':
+        sortOption = { year: -1 };
+        break;
+      default:
+        sortOption = { createdAt: -1 }; // Newest first
+    }
+    
+    // Execute query with pagination
+    const products = await Product.find(query)
+      .populate('category', 'name slug')
+      .populate('publisher', 'firstName lastName')
+      .sort(sortOption)
+      .skip(skip)
+      .limit(Number(limit));
+    
+    // Get total count for pagination
+    const total = await Product.countDocuments(query);
+    
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      totalPages: Math.ceil(total / Number(limit)),
+      currentPage: Number(page),
+      products
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch products',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Get a single product
+// @route   GET /api/products/:id
+// @access  Public
+exports.getProductById = async (req, res) => {
+  try {
+    const productId = req.params.id;
+    console.log(`🔍 Fetching product with ID: ${productId}`);
+    
+    // Find product by ID and populate category and publisher information
+    const product = await Product.findById(productId)
+      .populate('category', 'name')
+      .populate('publisher', 'firstName lastName email phone image createdAt');
+    
+    if (!product) {
+      console.log(`❌ Product not found: ${productId}`);
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+    
+    console.log(`✅ Product found: ${product.title}`);
+    res.status(200).json({
+      success: true,
+      product
+    });
+  } catch (error) {
+    console.error(`🚨 Error fetching product: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching product details',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Update a product
+// @route   PUT /api/products/:id
+// @access  Private
+exports.updateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Find product
+    const product = await Product.findById(id);
+    
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+    
+    // Check ownership
+    if (product.publisher.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this product'
+      });
+    }
+    
+    // Check if category is valid when updated
+    if (req.body.category) {
+      const categoryExists = await Category.findById(req.body.category);
+      if (!categoryExists) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid category'
+        });
+      }
+    }
+    
+    // Update product
+    const updatedProduct = await Product.findByIdAndUpdate(
+      id,
+      { 
+        ...req.body,
+        updatedAt: Date.now() 
+      },
+      { new: true, runValidators: true }
+    ).populate('category', 'name slug');
+    
+    res.status(200).json({
+      success: true,
+      product: updatedProduct
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update product',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Delete a product (soft delete)
+// @route   DELETE /api/products/:id
+// @access  Private
+exports.deleteProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Find product
+    const product = await Product.findById(id);
+    
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+    
+    // Check ownership
+    if (product.publisher.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to delete this product'
+      });
+    }
+    
+    // Soft delete
+    product.isActive = false;
+    product.updatedAt = Date.now();
+    await product.save();
+    
+    res.status(200).json({
+      success: true,
+      message: 'Product deleted successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete product',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Get latest products
+// @route   GET /api/products/latest
+// @access  Public
+exports.getLatestProducts = async (req, res) => {
+  try {
+    const limit = req.query.limit || 6;
+    
+    const products = await Product.find({ isActive: true })
+      .sort({ createdAt: -1 })
+      .limit(Number(limit))
+      .populate('category', 'name slug')
+      .populate('publisher', 'firstName lastName');
+    
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      products
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch latest products',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Search products
+// @route   GET /api/products/search
+// @access  Public
+exports.searchProducts = async (req, res) => {
+  try {
+    const { q } = req.query;
+    
+    if (!q) {
+      return res.status(400).json({
+        success: false,
+        message: 'Search query is required'
+      });
+    }
+    
+    const products = await Product.find({
+      $text: { $search: q },
+      isActive: true
+    })
+      .populate('category', 'name slug')
+      .populate('publisher', 'firstName lastName')
+      .sort({ score: { $meta: 'textScore' } });
+    
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      products
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to search products',
+      error: error.message
+    });
+  }
+};
+
+// If needed, update your getProducts controller to populate category information
+exports.getProducts = async (req, res) => {
+  try {
+    const { category, search, minPrice, maxPrice, limit = 50 } = req.query;
+    
+    const query = { isActive: true };
+    
+    // Add filters
+    if (category) {
+      query.category = category;
+    }
+    
+    if (minPrice) {
+      query.price = { $gte: Number(minPrice) };
+    }
+    
+    if (maxPrice) {
+      query.price = { ...query.price, $lte: Number(maxPrice) };
+    }
+    
+    if (search) {
+      query.$text = { $search: search };
+    }
+    
+    // Get products with category and publisher info
+    const products = await Product.find(query)
+      .populate('category', 'name')
+      .populate('publisher', 'firstName lastName')
+      .sort({ createdAt: -1 })
+      .limit(Number(limit));
+    
+    res.status(200).json({
+      success: true,
+      count: products.length,
+      products
+    });
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch products',
+      error: error.message
+    });
+  }
+};
