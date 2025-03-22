@@ -1,6 +1,7 @@
 const Product = require('../models/product');
 const { Category } = require('../models/category');
 const mongoose = require('mongoose');
+const { cloudinary, deleteImage } = require('../config/cloudinary');
 
 // @desc    Create a new product
 // @route   POST /api/products
@@ -278,6 +279,13 @@ exports.deleteProduct = async (req, res) => {
       });
     }
     
+    // Delete images from Cloudinary if they exist
+    if (product.images && product.images.length > 0) {
+      // Delete each image from Cloudinary
+      const deletePromises = product.images.map(imageUrl => deleteImage(imageUrl));
+      await Promise.all(deletePromises);
+    }
+    
     // Soft delete
     product.isActive = false;
     product.updatedAt = Date.now();
@@ -288,6 +296,7 @@ exports.deleteProduct = async (req, res) => {
       message: 'Product deleted successfully'
     });
   } catch (error) {
+    console.error('Error deleting product:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to delete product',
