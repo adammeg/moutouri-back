@@ -10,16 +10,15 @@ const productSchema = new Schema({
   category: {
     type: Schema.Types.ObjectId,
     ref: 'Category',
-    required: [true, 'Category is required']
+    required: [true, 'Product category is required']
   },
   description: {
     type: String,
-    required: [true, 'Description is required'],
-    trim: true
+    required: [true, 'Product description is required']
   },
   price: {
     type: Number,
-    required: [true, 'Price is required'],
+    required: [true, 'Product price is required'],
     min: [0, 'Price cannot be negative']
   },
   condition: {
@@ -44,13 +43,7 @@ const productSchema = new Schema({
   },
   images: {
     type: [String],
-    required: [true, 'At least one image is required'],
-    validate: {
-      validator: function(val) {
-        return val.length > 0;
-      },
-      message: 'Please provide at least one image'
-    }
+    required: [true, 'At least one product image is required']
   },
   location: {
     type: String,
