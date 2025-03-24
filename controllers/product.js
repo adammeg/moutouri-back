@@ -8,8 +8,14 @@ const { cloudinary, deleteImage } = require('../config/cloudinary');
 // @access  Private
 exports.createProduct = async (req, res) => {
   try {
-    console.log('📝 Creating product with data:', req.body);
-    console.log('📁 Files received:', req.files ? 'Yes' : 'No');
+    console.log("==== CREATE PRODUCT DEBUG ====");
+    console.log("Request body:", req.body);
+    console.log("Files received:", req.files || 'No files');
+    console.log("Required fields check:", {
+      cylinder: !!req.body.cylinder, 
+      kilometrage: !!req.body.kilometrage,
+      year: !!req.body.year
+    });
     
     // Process image files from middleware
     if (req.fileUrls && req.fileUrls.length > 0) {

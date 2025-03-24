@@ -65,6 +65,23 @@ const upload = multer({
   limits: limits
 });
 
+// Wrap your middleware to add logging
+const uploadWithLogging = (req, res, next) => {
+  console.log("==== UPLOAD MIDDLEWARE START ====");
+  console.log("Request received for upload");
+  
+  upload(req, res, function(err) {
+    if (err) {
+      console.log("Upload middleware error:", err);
+      return next(err);
+    }
+    
+    console.log("Files uploaded:", req.files ? req.files.length : 'None');
+    console.log("==== UPLOAD MIDDLEWARE END ====");
+    next();
+  });
+};
+
 // Single file upload middleware
 exports.uploadSingle = (fieldName) => upload.single(fieldName);
 
@@ -134,4 +151,6 @@ exports.processUploadedFiles = (req, res, next) => {
   }
   
   next();
-}; 
+};
+
+module.exports = uploadWithLogging; 
