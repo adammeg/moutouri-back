@@ -82,17 +82,13 @@ const uploadWithLogging = (req, res, next) => {
   });
 };
 
-// Single file upload middleware
-exports.uploadSingle = (fieldName) => upload.single(fieldName);
-
-// Multiple files upload middleware
-exports.uploadMultiple = (fieldName, maxCount) => upload.array(fieldName, maxCount || 10);
-
-// Handle field uploads
-exports.uploadFields = (fields) => upload.fields(fields);
+// Define original functions
+const uploadSingle = (fieldName) => upload.single(fieldName);
+const uploadMultiple = (fieldName, maxCount) => upload.array(fieldName, maxCount || 10);
+const uploadFields = (fields) => upload.fields(fields);
 
 // Error handling middleware for multer
-exports.handleUploadError = (err, req, res, next) => {
+const handleUploadError = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     // A Multer error occurred when uploading
     if (err.code === 'LIMIT_FILE_SIZE') {
@@ -122,29 +118,29 @@ exports.handleUploadError = (err, req, res, next) => {
 };
 
 // Get the URL for the uploaded file
-exports.getFileUrl = (req, filename) => {
+const getFileUrl = (req, filename) => {
   if (!filename) return null;
   return `${req.protocol}://${req.get('host')}/${filename.replace(/\\/g, '/')}`;
 };
 
 // Process uploaded files and return URLs
-exports.processUploadedFiles = (req, res, next) => {
+const processUploadedFiles = (req, res, next) => {
   // For single file upload
   if (req.file) {
-    req.fileUrl = exports.getFileUrl(req, req.file.path);
+    req.fileUrl = getFileUrl(req, req.file.path);
   }
   
   // For multiple files upload
   if (req.files) {
     if (Array.isArray(req.files)) {
       // If req.files is an array (from upload.array())
-      req.fileUrls = req.files.map(file => exports.getFileUrl(req, file.path));
+      req.fileUrls = req.files.map(file => getFileUrl(req, file.path));
     } else {
       // If req.files is an object with field names (from upload.fields())
       req.fileUrls = {};
       Object.keys(req.files).forEach(fieldName => {
         req.fileUrls[fieldName] = req.files[fieldName].map(file => 
-          exports.getFileUrl(req, file.path)
+            getFileUrl(req, file.path)
         );
       });
     }
@@ -159,5 +155,6 @@ module.exports = {
   uploadFields,
   handleUploadError,
   getFileUrl,
-  processUploadedFiles
+  processUploadedFiles,
+  uploadWithLogging
 };

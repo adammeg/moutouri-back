@@ -11,10 +11,13 @@ router.get('/latest', productController.getLatestProducts);
 router.get('/search', productController.searchProducts);
 router.get('/:id', productController.getProductById);
 
-// Protected routes with file upload
+// Modify your route to include the field name
 router.post('/', 
-  protect, 
-  upload.uploadWithLogging,  // Use logging wrapper for product uploads
+  protect,
+  // Use multer directly with field name specified
+  upload.uploadMultiple('images', 10),
+  upload.handleUploadError,
+  upload.processUploadedFiles,
   productController.createProduct
 );
 
