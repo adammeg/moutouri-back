@@ -50,12 +50,14 @@ const userRoutes = require('./routes/userRoutes');
 const productRoutes = require('./routes/productRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const adRoutes = require('./routes/adRoutes');
 
 // Use routes
 app.use('/users', userRoutes);
 app.use('/products', productRoutes);
 app.use('/categories', categoryRoutes);
 app.use('/admin', adminRoutes);
+app.use('/ads', adRoutes);
 
 // Root route
 app.get('/', (req, res) => {
