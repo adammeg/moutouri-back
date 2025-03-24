@@ -153,4 +153,11 @@ exports.processUploadedFiles = (req, res, next) => {
   next();
 };
 
-module.exports = uploadWithLogging; 
+module.exports = {
+  uploadSingle,
+  uploadMultiple,
+  uploadFields,
+  handleUploadError,
+  getFileUrl,
+  processUploadedFiles
+};

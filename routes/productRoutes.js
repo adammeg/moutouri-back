@@ -3,6 +3,7 @@ const router = express.Router();
 const productController = require('../controllers/product');
 const { protect } = require('../middleware/auth');
 const { uploadMultiple, processUploadedFiles, handleUploadError } = require('../middleware/upload');
+const upload = require('../middleware/upload');
 
 // Public routes
 router.get('/', productController.getAllProducts);
@@ -13,9 +14,7 @@ router.get('/:id', productController.getProductById);
 // Protected routes with file upload
 router.post('/', 
   protect, 
-  uploadMultiple('images', 10), // Allow up to 10 images
-  handleUploadError,
-  processUploadedFiles,
+  upload.uploadWithLogging,  // Use logging wrapper for product uploads
   productController.createProduct
 );
 
