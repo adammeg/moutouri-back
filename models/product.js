@@ -33,12 +33,12 @@ const productSchema = new Schema({
     max: [new Date().getFullYear() + 1, 'Year cannot be in the future']
   },
   kilometrage: {
-    type: Number,
+    type: String,
     required: [true, 'Kilometrage is required'],
     min: [0, 'Kilometrage cannot be negative']
   },
   cylinder: {
-    type: Number,
+    type: String,
     required: [true, 'Cylinder information is required']
   },
   images: {
