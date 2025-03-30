@@ -9,7 +9,7 @@ const mongoose = require('mongoose');
 exports.getAdminStats = async (req, res) => {
   try {
     // Verify if the user is an admin
-    if (!req.user.isAdmin) {
+    if (!req.user.role === 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin privileges required.'
@@ -249,7 +249,7 @@ exports.deleteProduct = async (req, res) => {
 exports.getAllUsers = async (req, res) => {
   try {
     // Verify if the user is an admin
-    if (!req.user.isAdmin) {
+      if (req.user.role === 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin privileges required.'
@@ -280,7 +280,7 @@ exports.updateUserRole = async (req, res) => {
     const { isAdmin } = req.body;
 
     // Verify if the user is an admin
-    if (!req.user.isAdmin) {
+      if (req.user.role === 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin privileges required.'
