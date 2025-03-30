@@ -10,10 +10,12 @@ router.get('/position/:position', adController.getActiveAdsByPosition);
 // Admin-only routes
 
 // Get all ads (admin)
-router.get('/', adController.getAllAds);
+router.get('/', protect, admin, adController.getAllAds);
 
 // Create ad (admin)
 router.post('/',
+  protect,
+  admin,
   uploadSingle('image'),
   handleUploadError,
   processUploadedFiles,
@@ -24,10 +26,11 @@ router.post('/',
 router.put('/:id',
   protect,
   admin,
-  uploadSingle('image') ,
+  uploadSingle('image'),
   handleUploadError,
   processUploadedFiles,
-  adController.updateAd);
+  adController.updateAd
+);
 
 // Delete ad (admin)
 router.delete('/:id', protect, admin, adController.deleteAd);

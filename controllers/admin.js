@@ -3,70 +3,84 @@
 const User = require('../models/user');
 const Product = require('../models/product');
 const Category = require('../models/category');
+const Ad = require('../models/ad');
+const mongoose = require('mongoose');
 
 // Get admin dashboard statistics
 exports.getAdminStats = async (req, res) => {
   try {
-    // Verify if the user is an admin
-    if (!req.user.role === 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Admin privileges required.'
-      });
-    }
-
-    // Use count() instead of countDocuments() for compatibility
-    const totalUsers = await User.find().count();
-    const totalProducts = await Product.find().count();
-    const totalCategories = await Category.find().count();
-
-    // Get recent products (last 5)
-    const recentProducts = await Product.find()
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .populate('publisher', 'firstName lastName email')
-      .populate('category', 'name');
-
-    // Get recent users (last 5)
+    console.log('Fetching admin stats for user:', req.user._id);
+    
+    // Get total counts
+    const totalUsers = await User.countDocuments();
+    const totalProducts = await Product.countDocuments();
+    const totalCategories = await Category.countDocuments();
+    const totalAds = await Ad.countDocuments();
+    
+    // Get recent users
     const recentUsers = await User.find()
       .sort({ createdAt: -1 })
       .limit(5)
-      .select('-password');
-
-    // Get product distribution by category
-    const productsByCategory = await Category.aggregate([
+      .select('firstName lastName email role createdAt');
+    
+    // Get recent products with population
+    const recentProducts = await Product.find()
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .populate('owner', 'firstName lastName email')
+      .populate('category', 'name');
+    
+    // Get products per category stats
+    const productsPerCategory = await Product.aggregate([
       {
-        $lookup: {
-          from: 'products',
-          localField: '_id',
-          foreignField: 'category',
-          as: 'products'
+        $group: {
+          _id: '$category',
+          count: { $sum: 1 }
         }
       },
       {
-        $project: {
-          name: 1,
-          productCount: { $size: '$products' }
+        $lookup: {
+          from: 'categories',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'categoryInfo'
         }
+      },
+      {
+        $unwind: '$categoryInfo'
+      },
+      {
+        $project: {
+          name: '$categoryInfo.name',
+          count: 1
+        }
+      },
+      {
+        $sort: { count: -1 }
       }
     ]);
-
+    
+    // Active vs Pending listings
+    const activeListings = await Product.countDocuments({ isVerified: true });
+    const pendingListings = await Product.countDocuments({ isVerified: false });
+    
+    // Response with all stats
     res.status(200).json({
-      success: true,
-      stats: {
-        totalUsers,
-        totalProducts,
-        totalCategories,
-        recentProducts,
-        recentUsers,
-        productsByCategory
-      }
+      totalUsers,
+      totalProducts,
+      totalCategories,
+      totalAds,
+      recentUsers,
+      recentProducts,
+      productsPerCategory,
+      activeListings,
+      pendingListings
     });
   } catch (error) {
-    console.error('Error fetching admin statistics:', error);
+    console.error('Error getting admin stats:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch admin statistics',
+      message: 'Error retrieving admin statistics',
       error: error.message
     });
   }
