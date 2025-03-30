@@ -3,7 +3,6 @@
 const User = require('../models/user');
 const Product = require('../models/product');
 const Category = require('../models/category');
-const mongoose = require('mongoose');
 
 // Get admin dashboard statistics
 exports.getAdminStats = async (req, res) => {
