@@ -160,21 +160,31 @@ exports.deleteCategory = async (req, res) => {
 // @access  Public
 exports.getAllCategories = async (req, res) => {
     try {
-        const categories = await Category.find({ isActive: true });
-
-        res.status(200).json({
-            success: true,
-            count: categories.length,
-            categories
-        });
+      console.log('Fetching all categories');
+      
+      // Ensure Category model is defined
+      if (!Category) {
+        throw new Error('Category model is not properly loaded');
+      }
+      
+      const categories = await Category.find().sort({ name: 1 });
+      
+      console.log(`Found ${categories.length} categories`);
+      
+      return res.status(200).json({
+        success: true,
+        count: categories.length,
+        categories
+      });
     } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch categories',
-            error: error.message
-        });
+      console.error('Error fetching categories:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch categories',
+        error: error.message
+      });
     }
-};
+  };
 
 // @desc    Get a single category by ID
 // @route   GET /api/categories/:id
