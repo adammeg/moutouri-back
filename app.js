@@ -18,8 +18,8 @@ mongoose.connect(process.env.MONGODB_URI, {
   console.log('📚 Checking models...');
   try {
     const User = require('./models/user');
-    const Product = require('./models/Product');
-    const Category = require('./models/Category');
+    const Product = require('./models/product');
+    const Category = require('./models/category');
     console.log('✅ All models loaded successfully');
   } catch (err) {
     console.error('❌ Error loading models:', err);

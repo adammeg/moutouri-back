@@ -1,5 +1,5 @@
 console.log('Loading Category controller...');
-const CategoryModule = require('../models/Category');
+const CategoryModule = require('../models/category');
 console.log('Category module type:', typeof CategoryModule);
 console.log('Category module structure:', Object.keys(CategoryModule));
 
@@ -10,7 +10,7 @@ const Category = typeof CategoryModule === 'object' && CategoryModule.Category
 
 console.log('Category model resolved:', !!Category);
 
-const Product = require('../models/Product');
+const Product = require('../models/product');
 const mongoose = require('mongoose');
 const path = require('path');
 
