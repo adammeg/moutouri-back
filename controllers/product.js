@@ -2,6 +2,7 @@ const Product = require('../models/Product');
 const Category = require('../models/Category');
 const mongoose = require('mongoose');
 const { cloudinary, deleteImage } = require('../config/cloudinary');
+const User = require('../models/user');
 
 // @desc    Create a new product
 // @route   POST /api/products
@@ -452,12 +453,12 @@ exports.getSearchSuggestions = async (req, res) => {
       ]
     })
     .limit(10)
-    .select('title'); // Only get titles for suggestions
+    .select('title brand model');
     
-    // Extract unique search terms
+    // Extract suggestions from products
     let suggestions = products.map(product => product.title);
     
-    // Add common search terms based on category
+    // Add category matches
     const categories = await Category.find({
       name: searchRegex
     }).select('name');
