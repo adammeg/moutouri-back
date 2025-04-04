@@ -1,5 +1,5 @@
-const Product = require('../models/product');
-const { Category } = require('../models/category');
+const Product = require('../models/Product');
+const Category = require('../models/Category');
 const mongoose = require('mongoose');
 const { cloudinary, deleteImage } = require('../config/cloudinary');
 
@@ -415,6 +415,73 @@ exports.getProducts = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch products',
+      error: error.message
+    });
+  }
+}
+
+console.log('Available models:', Object.keys(require('../models')));
+
+exports.getSearchSuggestions = async (req, res) => {
+  console.log('⚙️ getSearchSuggestions called');
+  console.log('🔍 Product model:', typeof Product !== 'undefined' ? 'Defined' : 'Undefined');
+  console.log('🔍 Category model:', typeof Category !== 'undefined' ? 'Defined' : 'Undefined');
+  
+  try {
+    const { q } = req.query;
+    
+    if (!q || q.length < 2) {
+      return res.status(200).json({
+        success: true,
+        suggestions: []
+      });
+    }
+    
+    // Create a regex for case-insensitive search
+    const searchRegex = new RegExp(q, 'i');
+    
+    // Find products matching the query in title, description, or brand
+    const products = await Product.find({
+      $or: [
+        { title: searchRegex },
+        { description: searchRegex },
+        { brand: searchRegex },
+        { model: searchRegex },
+        { color: searchRegex },
+        { location: searchRegex }
+      ]
+    })
+    .limit(10)
+    .select('title'); // Only get titles for suggestions
+    
+    // Extract unique search terms
+    let suggestions = products.map(product => product.title);
+    
+    // Add common search terms based on category
+    const categories = await Category.find({
+      name: searchRegex
+    }).select('name');
+    
+    if (categories.length > 0) {
+      const categoryNames = categories.map(cat => cat.name);
+      suggestions = [
+        ...suggestions,
+        ...categoryNames.map(name => `${name}`)
+      ];
+    }
+    
+    // Deduplicate and limit results
+    suggestions = [...new Set(suggestions)].slice(0, 10);
+    
+    return res.status(200).json({
+      success: true,
+      suggestions
+    });
+  } catch (error) {
+    console.error('Error getting search suggestions:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch search suggestions',
       error: error.message
     });
   }

@@ -10,10 +10,24 @@ const app = express();
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
-  useUnifiedTopology: true,
+  useUnifiedTopology: true
 })
-.then(() => console.log('MongoDB connected'))
-.catch(err => console.error('MongoDB connection error:', err));
+.then(() => {
+  console.log('✅ MongoDB Connected - Database is ready');
+  // Check if models are loaded properly
+  console.log('📚 Checking models...');
+  try {
+    const User = require('./models/user');
+    const Product = require('./models/Product');
+    const Category = require('./models/Category');
+    console.log('✅ All models loaded successfully');
+  } catch (err) {
+    console.error('❌ Error loading models:', err);
+  }
+})
+.catch(err => {
+  console.error('❌ MongoDB connection error:', err);
+});
 
 // CORS Configuration
 const corsOptions = {

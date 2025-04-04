@@ -1,5 +1,16 @@
-const { Category } = require('../models/category');
-const Product = require('../models/product');
+console.log('Loading Category controller...');
+const CategoryModule = require('../models/Category');
+console.log('Category module type:', typeof CategoryModule);
+console.log('Category module structure:', Object.keys(CategoryModule));
+
+// If the Category export is nested, try accessing it like this:
+const Category = typeof CategoryModule === 'object' && CategoryModule.Category 
+  ? CategoryModule.Category 
+  : CategoryModule;
+
+console.log('Category model resolved:', !!Category);
+
+const Product = require('../models/Product');
 const mongoose = require('mongoose');
 const path = require('path');
 
@@ -160,31 +171,35 @@ exports.deleteCategory = async (req, res) => {
 // @access  Public
 exports.getAllCategories = async (req, res) => {
     try {
-      console.log('Fetching all categories');
-      
-      // Ensure Category model is defined
-      if (!Category) {
-        throw new Error('Category model is not properly loaded');
-      }
-      
-      const categories = await Category.find().sort({ name: 1 });
-      
-      console.log(`Found ${categories.length} categories`);
-      
-      return res.status(200).json({
-        success: true,
-        count: categories.length,
-        categories
-      });
+        console.log('Fetching all categories...');
+        
+        // Check if Category model is available
+        if (!Category) {
+            console.error('Category model is not defined');
+            return res.status(500).json({
+                success: false,
+                message: 'Internal server error - category model not defined'
+            });
+        }
+        
+        const categories = await Category.find({ isActive: true }).sort('name');
+        
+        console.log(`Found ${categories.length} categories`);
+        
+        res.status(200).json({
+            success: true,
+            count: categories.length,
+            categories
+        });
     } catch (error) {
-      console.error('Error fetching categories:', error);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to fetch categories',
-        error: error.message
-      });
+        console.error('Error fetching categories:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch categories',
+            error: error.message
+        });
     }
-  };
+};
 
 // @desc    Get a single category by ID
 // @route   GET /api/categories/:id

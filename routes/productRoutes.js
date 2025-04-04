@@ -9,6 +9,7 @@ const upload = require('../middleware/upload');
 router.get('/', productController.getAllProducts);
 router.get('/latest', productController.getLatestProducts);
 router.get('/search', productController.searchProducts);
+router.get('/suggestions', productController.getSearchSuggestions);
 router.get('/:id', productController.getProductById);
 
 // Modify your route to include the field name
@@ -20,7 +21,6 @@ router.post('/',
   upload.processUploadedFiles,
   productController.createProduct
 );
-
 router.put('/:id', 
   protect, 
   uploadMultiple('images', 10),
