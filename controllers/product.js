@@ -421,14 +421,12 @@ exports.getProducts = async (req, res) => {
   }
 }
 
-console.log('Available models:', Object.keys(require('../models')));
-
 exports.getSearchSuggestions = async (req, res) => {
-  console.log('⚙️ getSearchSuggestions called');
-  console.log('🔍 Product model:', typeof Product !== 'undefined' ? 'Defined' : 'Undefined');
-  console.log('🔍 Category model:', typeof Category !== 'undefined' ? 'Defined' : 'Undefined');
-  
   try {
+    console.log('⚙️ getSearchSuggestions called');
+    console.log('🔍 Product model:', typeof Product !== 'undefined' ? 'Defined' : 'Undefined');
+    console.log('🔍 Category model:', typeof Category !== 'undefined' ? 'Defined' : 'Undefined');
+    
     const { q } = req.query;
     
     if (!q || q.length < 2) {
