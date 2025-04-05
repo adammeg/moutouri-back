@@ -158,5 +158,5 @@ module.exports = {
   handleUploadError,
   getFileUrl,
   processUploadedFiles,
-  uploadWithLogging
+  uploadWithLogging,
 };

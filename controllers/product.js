@@ -26,8 +26,8 @@ exports.createProduct = async (req, res) => {
       console.log('❌ No images received from middleware');
     }
     
-    // Set the publisher to the current user
-    req.body.publisher = req.user._id;
+    // Set the user to the current user
+    req.body.user = req.user._id;
     
     // Create the product
     const product = await Product.create(req.body);
@@ -142,7 +142,7 @@ exports.getAllProducts = async (req, res) => {
     // Execute query with pagination
     const products = await Product.find(query)
       .populate('category', 'name slug')
-      .populate('publisher', 'firstName lastName')
+      .populate('user', 'firstName lastName')
       .sort(sortOption)
       .skip(skip)
       .limit(Number(limit));
@@ -174,10 +174,10 @@ exports.getProductById = async (req, res) => {
     const productId = req.params.id;
     console.log(`🔍 Fetching product with ID: ${productId}`);
     
-    // Find product by ID and populate category and publisher information
+    // Find product by ID and populate category and user information
     const product = await Product.findById(productId)
       .populate('category', 'name')
-      .populate('publisher', 'firstName lastName email phone image createdAt');
+      .populate('user', 'firstName lastName email phone image createdAt');
     
     if (!product) {
       console.log(`❌ Product not found: ${productId}`);
@@ -220,7 +220,7 @@ exports.updateProduct = async (req, res) => {
     }
     
     // Check ownership
-    if (product.publisher.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+    if (product.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to update this product'
@@ -279,7 +279,7 @@ exports.deleteProduct = async (req, res) => {
     }
     
     // Check ownership
-    if (product.publisher.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+    if (product.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to delete this product'
@@ -323,7 +323,7 @@ exports.getLatestProducts = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(Number(limit))
       .populate('category', 'name slug')
-      .populate('publisher', 'firstName lastName');
+      .populate('user', 'firstName lastName');
     
     res.status(200).json({
       success: true,
@@ -358,7 +358,7 @@ exports.searchProducts = async (req, res) => {
       isActive: true
     })
       .populate('category', 'name slug')
-      .populate('publisher', 'firstName lastName')
+      .populate('user', 'firstName lastName')
       .sort({ score: { $meta: 'textScore' } });
     
     res.status(200).json({
@@ -399,10 +399,10 @@ exports.getProducts = async (req, res) => {
       query.$text = { $search: search };
     }
     
-    // Get products with category and publisher info
+    // Get products with category and user info
     const products = await Product.find(query)
       .populate('category', 'name')
-      .populate('publisher', 'firstName lastName')
+      .populate('user', 'firstName lastName')
       .sort({ createdAt: -1 })
       .limit(Number(limit));
     
