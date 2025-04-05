@@ -26,9 +26,14 @@ exports.getAdminStats = async (req, res) => {
     // Get recent products with population
     const recentProducts = await Product.find()
       .sort({ createdAt: -1 })
-      .limit(10)
-      .populate('owner', 'firstName lastName email')
-      .populate('category', 'name');
+      .limit(5)
+      .populate('category', 'name')
+      .populate('user', 'firstName lastName email image') 
+      .select('_id title price images isVerified createdAt category user');
+    
+      const users = await User.find()
+      .sort({ createdAt: -1 })
+      .select('_id firstName lastName email role image createdAt');
     
     // Get products per category stats
     const productsPerCategory = await Product.aggregate([
@@ -74,7 +79,8 @@ exports.getAdminStats = async (req, res) => {
       recentProducts,
       productsPerCategory,
       activeListings,
-      pendingListings
+      pendingListings,
+      users
     });
   } catch (error) {
     console.error('Error getting admin stats:', error);

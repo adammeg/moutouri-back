@@ -50,7 +50,7 @@ const productSchema = new Schema({
     required: [true, 'Location is required'],
     trim: true
   },
-  publisher: {
+  user: {
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: [true, 'Publisher information is required']
