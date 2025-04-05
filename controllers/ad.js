@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const { cloudinary } = require('../config/cloudinary');
 const fs = require('fs');
 const path = require('path');
+
 // Get all ads
 exports.getAllAds = async (req, res) => {
   try {
@@ -60,12 +61,6 @@ exports.getActiveAdsByPosition = async (req, res) => {
     });
   }
 };
-
-const Ad = require('../models/ad');
-const mongoose = require('mongoose');
-const { cloudinary } = require('../config/cloudinary');
-const fs = require('fs');
-const path = require('path');
 
 // Enhanced createAd function with Cloudinary support
 exports.createAd = async (req, res) => {
