@@ -7,7 +7,7 @@ const UPLOADS_FOLDER = 'uploads';
 const PRODUCT_IMAGES = `${UPLOADS_FOLDER}/products`;
 const USER_IMAGES = `${UPLOADS_FOLDER}/users`;
 const CATEGORY_IMAGES = `${UPLOADS_FOLDER}/categories`;
-
+const AD_IMAGES = `${UPLOADS_FOLDER}/ads`;  
 // Ensure upload directories exist
 [UPLOADS_FOLDER, PRODUCT_IMAGES, USER_IMAGES, CATEGORY_IMAGES].forEach(dir => {
   if (!fs.existsSync(dir)) {
@@ -27,7 +27,9 @@ const storage = multer.diskStorage({
       uploadPath = USER_IMAGES;
     } else if (req.originalUrl.includes('/categories')) {
       uploadPath = CATEGORY_IMAGES;
-    }
+    } else if (req.originalUrl.includes('/ads')) {
+      uploadPath = AD_IMAGES;
+    } 
     
     console.log("Uploading file to:", uploadPath);
     cb(null, uploadPath);

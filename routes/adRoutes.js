@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const adController = require('../controllers/ad');
 const { protect, admin } = require('../middleware/auth');
-const { uploadSingle, handleUploadError, processUploadedFiles } = require('../middleware/upload');
+const { uploadSingle, handleUploadError, processUploadedFiles, uploadSingle } = require('../middleware/upload');
 
 // Public routes
 router.get('/position/:position', adController.getActiveAdsByPosition);
@@ -17,6 +17,7 @@ router.get('/stats', protect, admin, adController.getAdStats);
 router.post('/',
   protect,
   admin,
+  uploadSingle,
   uploadSingle('image'),
   handleUploadError,
   processUploadedFiles,
@@ -27,6 +28,7 @@ router.post('/',
 router.put('/:id',
   protect,
   admin,
+  uploadSingle,
   uploadSingle('image'),
   handleUploadError,
   processUploadedFiles,

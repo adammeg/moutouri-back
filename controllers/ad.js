@@ -1,6 +1,8 @@
 const Ad = require('../models/ad');
-const { processUploadedFiles } = require('../middleware/upload');
 const mongoose = require('mongoose');
+const { cloudinary } = require('../config/cloudinary');
+const fs = require('fs');
+const path = require('path');
 // Get all ads
 exports.getAllAds = async (req, res) => {
   try {
@@ -59,7 +61,13 @@ exports.getActiveAdsByPosition = async (req, res) => {
   }
 };
 
-// Create a new ad with enhanced validation
+const Ad = require('../models/ad');
+const mongoose = require('mongoose');
+const { cloudinary } = require('../config/cloudinary');
+const fs = require('fs');
+const path = require('path');
+
+// Enhanced createAd function with Cloudinary support
 exports.createAd = async (req, res) => {
   try {
     // Validate required fields
@@ -71,18 +79,47 @@ exports.createAd = async (req, res) => {
     }
     
     // Check if image was uploaded
-    if (!req.fileUrl) {
+    if (!req.fileUrl && !req.file) {
       return res.status(400).json({
         success: false,
         message: 'Please upload an image for the ad'
       });
     }
 
-    // Create ad with user as creator
+    let imageUrl = req.fileUrl;
+    
+    // If we have a file but no fileUrl (direct file upload), upload to Cloudinary
+    if (req.file && !req.fileUrl) {
+      try {
+        // Upload to Cloudinary
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: 'moutouri/ads',
+          resource_type: 'image',
+          transformation: [
+            { width: 1200, crop: "limit" },
+            { quality: "auto" }
+          ]
+        });
+        
+        imageUrl = result.secure_url;
+        
+        // Clean up the local file
+        fs.unlinkSync(req.file.path);
+      } catch (uploadError) {
+        console.error('Cloudinary upload error:', uploadError);
+        return res.status(500).json({
+          success: false,
+          message: 'Error uploading image to Cloudinary',
+          error: uploadError.message
+        });
+      }
+    }
+
+    // Create ad with proper image URL and user as creator
     const ad = await Ad.create({
       title: req.body.title,
       description: req.body.description,
-      image: req.fileUrl,
+      image: imageUrl,
       link: req.body.link,
       position: req.body.position,
       isActive: req.body.isActive === 'true',
@@ -105,6 +142,135 @@ exports.createAd = async (req, res) => {
     });
   }
 };
+
+// Update an ad with improved Cloudinary handling
+exports.updateAd = async (req, res) => {
+  try {
+    const ad = await Ad.findById(req.params.id);
+    
+    if (!ad) {
+      return res.status(404).json({
+        success: false,
+        message: 'Ad not found'
+      });
+    }
+    
+    // Handle image update if a new one was uploaded
+    if (req.file || req.fileUrl) {
+      // If there's an existing Cloudinary image, delete it
+      if (ad.image && ad.image.includes('cloudinary.com')) {
+        try {
+          // Extract public ID from Cloudinary URL
+          const publicId = ad.image.split('/').slice(-1)[0].split('.')[0];
+          if (publicId) {
+            await cloudinary.uploader.destroy(`moutouri/ads/${publicId}`);
+          }
+        } catch (deleteError) {
+          console.warn('Failed to delete old image from Cloudinary:', deleteError);
+          // Continue with the update even if deletion fails
+        }
+      }
+      
+      // Use existing fileUrl from middleware or upload directly
+      let imageUrl = req.fileUrl;
+      
+      // If we have a file but no fileUrl, upload to Cloudinary
+      if (req.file && !req.fileUrl) {
+        try {
+          // Upload to Cloudinary
+          const result = await cloudinary.uploader.upload(req.file.path, {
+            folder: 'moutouri/ads',
+            resource_type: 'image',
+            transformation: [
+              { width: 1200, crop: "limit" },
+              { quality: "auto" }
+            ]
+          });
+          
+          imageUrl = result.secure_url;
+          
+          // Clean up the local file
+          fs.unlinkSync(req.file.path);
+        } catch (uploadError) {
+          console.error('Cloudinary upload error:', uploadError);
+          return res.status(500).json({
+            success: false,
+            message: 'Error uploading image to Cloudinary',
+            error: uploadError.message
+          });
+        }
+      }
+      
+      // Set the new image URL
+      req.body.image = imageUrl;
+    }
+    
+    // Update the ad
+    const updatedAd = await Ad.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true
+    });
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Ad updated successfully',
+      ad: updatedAd
+    });
+  } catch (error) {
+    console.error('Error updating ad:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Could not update ad',
+      error: error.message
+    });
+  }
+};
+
+// Delete an ad with Cloudinary cleanup
+exports.deleteAd = async (req, res) => {
+  try {
+    const ad = await Ad.findById(req.params.id);
+    
+    if (!ad) {
+      return res.status(404).json({
+        success: false,
+        message: 'Ad not found'
+      });
+    }
+    
+    // Delete the image from Cloudinary if it exists
+    if (ad.image && ad.image.includes('cloudinary.com')) {
+      try {
+        // Extract public ID from Cloudinary URL
+        const publicId = ad.image.split('/').slice(-1)[0].split('.')[0];
+        if (publicId) {
+          await cloudinary.uploader.destroy(`moutouri/ads/${publicId}`);
+          console.log(`Deleted image from Cloudinary: ${publicId}`);
+        }
+      } catch (deleteError) {
+        console.warn('Failed to delete image from Cloudinary:', deleteError);
+        // Continue with deletion even if image removal fails
+      }
+    }
+    
+    // Delete the ad from the database
+    await Ad.findByIdAndDelete(req.params.id);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Ad deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting ad:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Could not delete ad',
+      error: error.message
+    });
+  }
+};
+
+// Create a new ad with enhanced validation
 
 // Track ad impressions
 exports.trackAdImpression = async (req, res) => {
@@ -213,108 +379,6 @@ exports.getAdStats = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Could not fetch ad statistics',
-      error: error.message
-    });
-  }
-};
-
-// Create a new ad
-exports.createAd = async (req, res) => {
-  try {
-    // Check if image was uploaded
-    if (!req.fileUrl && !req.fileUrls) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please upload an image for the ad'
-      });
-    }
-
-    // Get image URL from middleware
-    const image = req.fileUrl || (req.fileUrls && req.fileUrls[0]);
-
-    // Create ad with user as creator
-    const ad = await Ad.create({
-      ...req.body,
-      image,
-      createdBy: req.user._id
-    });
-
-    res.status(201).json({
-      success: true,
-      message: 'Ad created successfully',
-      ad
-    });
-  } catch (error) {
-    console.error('Error creating ad:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Could not create ad',
-      error: error.message
-    });
-  }
-};
-
-// Update an ad
-exports.updateAd = async (req, res) => {
-  try {
-    let ad = await Ad.findById(req.params.id);
-    
-    if (!ad) {
-      return res.status(404).json({
-        success: false,
-        message: 'Ad not found'
-      });
-    }
-    
-    // Update image if a new one was uploaded
-    if (req.fileUrl) {
-      req.body.image = req.fileUrl;
-    }
-    
-    // Update the ad
-    ad = await Ad.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true
-    });
-    
-    res.status(200).json({
-      success: true,
-      message: 'Ad updated successfully',
-      ad
-    });
-  } catch (error) {
-    console.error('Error updating ad:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Could not update ad',
-      error: error.message
-    });
-  }
-};
-
-// Delete an ad
-exports.deleteAd = async (req, res) => {
-  try {
-    const ad = await Ad.findById(req.params.id);
-    
-    if (!ad) {
-      return res.status(404).json({
-        success: false,
-        message: 'Ad not found'
-      });
-    }
-    
-    await Ad.findByIdAndDelete(req.params.id);
-    
-    res.status(200).json({
-      success: true,
-      message: 'Ad deleted successfully'
-    });
-  } catch (error) {
-    console.error('Error deleting ad:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Could not delete ad',
       error: error.message
     });
   }
