@@ -4,13 +4,14 @@ const adController = require('../controllers/ad');
 const { protect, admin } = require('../middleware/auth');
 const { uploadSingle, handleUploadError, processUploadedFiles } = require('../middleware/upload');
 
-// Public route - get active ads by position
+// Public routes
 router.get('/position/:position', adController.getActiveAdsByPosition);
+router.post('/track/impression/:adId', adController.trackAdImpression);
+router.post('/track/click/:adId', adController.trackAdClick);
 
 // Admin-only routes
-
-// Get all ads (admin)
 router.get('/', protect, admin, adController.getAllAds);
+router.get('/stats', protect, admin, adController.getAdStats);
 
 // Create ad (admin)
 router.post('/',

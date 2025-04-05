@@ -38,6 +38,14 @@ const AdSchema = new mongoose.Schema({
     type: Date,
     required: false
   },
+  impressions: {
+    type: Number,
+    default: 0
+  },
+  clicks: {
+    type: Number,
+    default: 0
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -46,5 +54,9 @@ const AdSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// Add indexes for performance
+AdSchema.index({ position: 1, isActive: 1, startDate: 1, endDate: 1 });
+AdSchema.index({ createdBy: 1 });
 
 module.exports = mongoose.model('Ad', AdSchema);
