@@ -63,77 +63,94 @@ exports.getActiveAdsByPosition = async (req, res) => {
 };
 
 // Enhanced createAd function with Cloudinary support
+
+// @desc    Create a new ad
+// @route   POST /ads
+// @access  Admin
 exports.createAd = async (req, res) => {
   try {
-    // Validate required fields
+    console.log("Creating ad with data:", req.body);
+    console.log("File info:", req.file);
+    
+    // Check if required fields are provided
     if (!req.body.title || !req.body.description || !req.body.position) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide title, description and position'
+        message: 'Please provide title, description, and position'
       });
     }
     
-    // Check if image was uploaded
-    if (!req.fileUrl && !req.file) {
+    // Check if file was uploaded
+    if (!req.file) {
       return res.status(400).json({
         success: false,
         message: 'Please upload an image for the ad'
       });
     }
-
-    let imageUrl = req.fileUrl;
     
-    // If we have a file but no fileUrl (direct file upload), upload to Cloudinary
-    if (req.file && !req.fileUrl) {
-      try {
-        // Upload to Cloudinary
-        const result = await cloudinary.uploader.upload(req.file.path, {
-          folder: 'moutouri/ads',
-          resource_type: 'image',
-          transformation: [
-            { width: 1200, crop: "limit" },
-            { quality: "auto" }
-          ]
-        });
-        
-        imageUrl = result.secure_url;
-        
-        // Clean up the local file
+    // Upload to Cloudinary instead of using local storage
+    let imageUrl;
+    try {
+      // Use Cloudinary's uploader
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'moutouri/ads',
+        resource_type: 'image',
+        transformation: [
+          { width: 1200, crop: "limit" },
+          { quality: "auto" }
+        ]
+      });
+      
+      imageUrl = result.secure_url;
+      console.log("Cloudinary upload successful:", imageUrl);
+      
+      // Delete the local temp file after upload
+      if (req.file.path && fs.existsSync(req.file.path)) {
         fs.unlinkSync(req.file.path);
-      } catch (uploadError) {
-        console.error('Cloudinary upload error:', uploadError);
-        return res.status(500).json({
-          success: false,
-          message: 'Error uploading image to Cloudinary',
-          error: uploadError.message
-        });
       }
+    } catch (uploadError) {
+      console.error("Cloudinary upload error:", uploadError);
+      return res.status(500).json({
+        success: false,
+        message: 'Error uploading image to Cloudinary',
+        error: uploadError.message
+      });
     }
-
-    // Create ad with proper image URL and user as creator
-    const ad = await Ad.create({
+    
+    // Create new ad document
+    const adData = {
       title: req.body.title,
       description: req.body.description,
-      image: imageUrl,
-      link: req.body.link,
       position: req.body.position,
+      link: req.body.link,
+      image: imageUrl,
       isActive: req.body.isActive === 'true',
-      startDate: req.body.startDate ? new Date(req.body.startDate) : new Date(),
-      endDate: req.body.endDate ? new Date(req.body.endDate) : null,
       createdBy: req.user._id
-    });
-
-    return res.status(201).json({
+    };
+    
+    // Add dates if provided
+    if (req.body.startDate) {
+      adData.startDate = new Date(req.body.startDate);
+    }
+    
+    if (req.body.endDate) {
+      adData.endDate = new Date(req.body.endDate);
+    }
+    
+    // Create the ad
+    const ad = await Ad.create(adData);
+    
+    res.status(201).json({
       success: true,
       message: 'Ad created successfully',
       ad
     });
   } catch (error) {
     console.error('Error creating ad:', error);
-    return res.status(500).json({
+    
+    res.status(500).json({
       success: false,
-      message: 'Could not create ad',
-      error: error.message
+      message: error.message || 'Could not create ad'
     });
   }
 };
