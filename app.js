@@ -32,7 +32,6 @@ mongoose.connect(process.env.MONGODB_URI, {
 // CORS Configuration
 const corsOptions = {
   origin: [
-    'http://localhost:3000', 
     'https://moutouri-git-main-adams-projects-88d5dcc2.vercel.app',
     'https://moutouri.vercel.app',
     'https://www.moutouri.tn',
