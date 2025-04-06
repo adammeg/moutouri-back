@@ -177,7 +177,7 @@ exports.getProductById = async (req, res) => {
     // Find product by ID and populate category and user information
     const product = await Product.findById(productId)
       .populate('category', 'name')
-      .populate('publisher', 'firstName lastName email phone image createdAt');
+      .populate('user', 'firstName lastName email phone image createdAt');
     
     if (!product) {
       console.log(`❌ Product not found: ${productId}`);
@@ -323,7 +323,7 @@ exports.getLatestProducts = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(Number(limit))
       .populate('category', 'name slug')
-      .populate('publisher', 'firstName lastName');
+      .populate('user', 'firstName lastName');
     
     res.status(200).json({
       success: true,
@@ -358,7 +358,7 @@ exports.searchProducts = async (req, res) => {
       isActive: true
     })
       .populate('category', 'name slug')
-      .populate('publisher', 'firstName lastName')
+      .populate('user', 'firstName lastName')
       .sort({ score: { $meta: 'textScore' } });
     
     res.status(200).json({
@@ -402,7 +402,7 @@ exports.getProducts = async (req, res) => {
     // Get products with category and user info
     const products = await Product.find(query)
       .populate('category', 'name')
-      .populate('publisher', 'firstName lastName')
+      .populate('user', 'firstName lastName')
       .sort({ createdAt: -1 })
       .limit(Number(limit));
     
