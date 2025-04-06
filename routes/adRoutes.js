@@ -17,7 +17,6 @@ router.get('/stats', protect, admin, adController.getAdStats);
 router.post('/',
   protect,
   admin,
-  uploadSingle,
   uploadSingle('image'),
   handleUploadError,
   processUploadedFiles,
