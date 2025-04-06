@@ -19,6 +19,15 @@ const productStorage = new CloudinaryStorage({
   }
 });
 
+const adStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'moutouri/ads',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+    transformation: [{ width: 1200, crop: 'limit' }]
+  }
+});
+
 // Create storage engine for category images
 const categoryStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
@@ -67,6 +76,11 @@ const uploadUserImage = multer({
 
 const uploadBannerImage = multer({ 
   storage: bannerStorage,
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
+
+const uploadAdImage = multer({ 
+  storage: adStorage,
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
@@ -124,6 +138,7 @@ module.exports = {
   uploadCategoryImage,
   uploadUserImage,
   uploadBannerImage,
+  uploadAdImage,
   getPublicIdFromUrl,
   deleteImage
 };
