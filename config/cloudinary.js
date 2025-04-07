@@ -2,11 +2,17 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 
-// Configure Cloudinary
+// Log the configuration values (with redaction)
+console.log('Cloudinary Configuration:');
+console.log('Cloud Name:', process.env.CLOUDINARY_CLOUD_NAME || 'NOT SET');
+console.log('API Key Set:', process.env.CLOUDINARY_API_KEY ? 'YES (first 4 chars: ' + process.env.CLOUDINARY_API_KEY.substring(0, 4) + '...)' : 'NO');
+console.log('API Secret Set:', process.env.CLOUDINARY_API_SECRET ? 'YES (length: ' + process.env.CLOUDINARY_API_SECRET.length + ')' : 'NO');
+
+// Make sure to use the actual environment variables
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dzamzt9og',
-  api_key: process.env.CLOUDINARY_API_KEY || 'your_api_key',
-  api_secret: process.env.CLOUDINARY_API_SECRET || 'your_api_secret'
+  api_key: process.env.CLOUDINARY_API_KEY || '552241466825622',  // ONLY FOR TESTING! Remove in production!
+  api_secret: process.env.CLOUDINARY_API_SECRET || 'rfstWtGeP4LONq5qSsFp6dcik-A'  // ONLY FOR TESTING! Remove in production!
 });
 
 // Create storage engine for product images

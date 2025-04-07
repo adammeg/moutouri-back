@@ -84,9 +84,13 @@ exports.createAd = async (req, res) => {
       });
     }
 
-    // Ensure Cloudinary is properly configured
-    if (!cloudinary.config().cloud_name || !cloudinary.config().api_key) {
-      console.error("Cloudinary configuration missing");
+    // Ensure Cloudinary is properly configured with more detailed logging
+    if (!cloudinary.config().cloud_name || !cloudinary.config().api_key || !cloudinary.config().api_secret) {
+      console.error("Cloudinary configuration missing or invalid:", {
+        cloudName: cloudinary.config().cloud_name || 'NOT SET',
+        apiKeyPresent: !!cloudinary.config().api_key,
+        apiSecretPresent: !!cloudinary.config().api_secret
+      });
       return res.status(500).json({
         success: false,
         message: 'Server configuration error: Invalid Cloudinary setup'
