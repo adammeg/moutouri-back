@@ -62,17 +62,13 @@ exports.getActiveAdsByPosition = async (req, res) => {
   }
 };
 
-// Enhanced createAd function with Cloudinary support
-
-// @desc    Create a new ad
-// @route   POST /ads
-// @access  Admin
+// Enhanced createAd function with proper Cloudinary error handling and cleanup
 exports.createAd = async (req, res) => {
   try {
     console.log("Creating ad with data:", req.body);
     console.log("File info:", req.file);
     
-    // Check if required fields are provided
+    // Validate required fields
     if (!req.body.title || !req.body.description || !req.body.position) {
       return res.status(400).json({
         success: false,
@@ -87,18 +83,30 @@ exports.createAd = async (req, res) => {
         message: 'Please upload an image for the ad'
       });
     }
+
+    // Ensure Cloudinary is properly configured
+    if (!cloudinary.config().cloud_name || !cloudinary.config().api_key) {
+      console.error("Cloudinary configuration missing");
+      return res.status(500).json({
+        success: false,
+        message: 'Server configuration error: Invalid Cloudinary setup'
+      });
+    }
     
-    // Upload to Cloudinary instead of using local storage
+    // Upload to Cloudinary with better error handling
     let imageUrl;
     try {
-      // Use Cloudinary's uploader
+      // Use Cloudinary's uploader with robust options
       const result = await cloudinary.uploader.upload(req.file.path, {
         folder: 'moutouri/ads',
         resource_type: 'image',
+        quality: 'auto',
+        fetch_format: 'auto',
         transformation: [
-          { width: 1200, crop: "limit" },
-          { quality: "auto" }
-        ]
+          { width: 1200, height: 400, crop: "fill" },
+          { quality: "auto:good" }
+        ],
+        timeout: 60000, // Longer timeout for larger files
       });
       
       imageUrl = result.secure_url;
@@ -109,7 +117,7 @@ exports.createAd = async (req, res) => {
         fs.unlinkSync(req.file.path);
       }
     } catch (uploadError) {
-      console.error("Cloudinary upload error:", uploadError);
+      console.error("Cloudinary upload error details:", uploadError);
       return res.status(500).json({
         success: false,
         message: 'Error uploading image to Cloudinary',
@@ -117,7 +125,7 @@ exports.createAd = async (req, res) => {
       });
     }
     
-    // Create new ad document
+    // Create ad document with validated data
     const adData = {
       title: req.body.title,
       description: req.body.description,
@@ -128,16 +136,30 @@ exports.createAd = async (req, res) => {
       createdBy: req.user._id
     };
     
-    // Add dates if provided
+    // Add dates if provided with proper validation
     if (req.body.startDate) {
-      adData.startDate = new Date(req.body.startDate);
+      const startDate = new Date(req.body.startDate);
+      if (isNaN(startDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid start date format'
+        });
+      }
+      adData.startDate = startDate;
     }
     
     if (req.body.endDate) {
-      adData.endDate = new Date(req.body.endDate);
+      const endDate = new Date(req.body.endDate);
+      if (isNaN(endDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid end date format'
+        });
+      }
+      adData.endDate = endDate;
     }
     
-    // Create the ad
+    // Create the ad with error handling
     const ad = await Ad.create(adData);
     
     res.status(201).json({
@@ -150,7 +172,8 @@ exports.createAd = async (req, res) => {
     
     res.status(500).json({
       success: false,
-      message: error.message || 'Could not create ad'
+      message: error.message || 'Could not create ad',
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };

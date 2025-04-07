@@ -9,9 +9,16 @@ const USER_IMAGES = `${UPLOADS_FOLDER}/users`;
 const CATEGORY_IMAGES = `${UPLOADS_FOLDER}/categories`;
 const AD_IMAGES = `${UPLOADS_FOLDER}/ads`;  
 // Ensure upload directories exist
-[UPLOADS_FOLDER, PRODUCT_IMAGES, USER_IMAGES, CATEGORY_IMAGES].forEach(dir => {
+const directories = [UPLOADS_FOLDER, PRODUCT_IMAGES, USER_IMAGES, CATEGORY_IMAGES, AD_IMAGES];
+directories.forEach(dir => {
   if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+      console.log(`Created directory: ${dir}`);
+    } catch (err) {
+      console.error(`Error creating directory ${dir}:`, err);
+      // Don't throw - allow the app to continue and fall back to Cloudinary
+    }
   }
 });
 
