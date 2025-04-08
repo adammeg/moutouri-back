@@ -72,95 +72,58 @@ exports.createProduct = async (req, res) => {
 // @access  Public
 exports.getAllProducts = async (req, res) => {
   try {
-    const {
-      keyword,
-      category,
-      minPrice,
-      maxPrice,
-      condition,
-      minYear,
-      maxYear,
-      sort = 'createdAt',
-      limit = 10,
-      page = 1
-    } = req.query;
+    const { search, category, minPrice, maxPrice, condition, location } = req.query;
     
-    // Build filter query
-    let query = { isActive: true };
+    // Build query based on filters
+    const query = {};
     
-    // Search by keyword
-    if (keyword) {
+    if (search) {
+      // Improve search with regex and case insensitivity 
+      // Also search in multiple fields
       query.$or = [
-        { title: { $regex: keyword, $options: 'i' } },
-        { description: { $regex: keyword, $options: 'i' } }
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
       ];
     }
     
-    // Filter by category
     if (category) {
       query.category = category;
     }
     
-    // Filter by price range
     if (minPrice || maxPrice) {
       query.price = {};
       if (minPrice) query.price.$gte = Number(minPrice);
       if (maxPrice) query.price.$lte = Number(maxPrice);
     }
     
-    // Filter by condition
     if (condition) {
       query.condition = condition;
     }
     
-    // Filter by year range
-    if (minYear || maxYear) {
-      query.year = {};
-      if (minYear) query.year.$gte = Number(minYear);
-      if (maxYear) query.year.$lte = Number(maxYear);
+    if (location) {
+      query.location = { $regex: location, $options: 'i' };
     }
     
-    // Set up pagination
-    const skip = (Number(page) - 1) * Number(limit);
+    console.log("Query filters:", query);
     
-    // Set up sorting (newest, price low to high, price high to low)
-    let sortOption = {};
-    switch (sort) {
-      case 'priceAsc':
-        sortOption = { price: 1 };
-        break;
-      case 'priceDesc':
-        sortOption = { price: -1 };
-        break;
-      case 'yearDesc':
-        sortOption = { year: -1 };
-        break;
-      default:
-        sortOption = { createdAt: -1 }; // Newest first
-    }
-    
-    // Execute query with pagination
+    // Execute query with filters
     const products = await Product.find(query)
       .populate('category', 'name slug')
-      .populate('user', 'firstName lastName')
-      .sort(sortOption)
-      .skip(skip)
-      .limit(Number(limit));
+      .populate('user', 'firstName lastName image')
+      .sort({ createdAt: -1 });
     
-    // Get total count for pagination
-    const total = await Product.countDocuments(query);
+    console.log(`Found ${products.length} products matching filters`);
     
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       count: products.length,
-      totalPages: Math.ceil(total / Number(limit)),
-      currentPage: Number(page),
       products
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Product search error:", error);
+    return res.status(500).json({
       success: false,
-      message: 'Failed to fetch products',
+      message: "Error searching products",
       error: error.message
     });
   }
